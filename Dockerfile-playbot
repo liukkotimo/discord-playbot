@@ -1,0 +1,22 @@
+FROM python:3.12-alpine3.22
+
+# 1) Set timezone to Helsinki
+RUN apk add --no-cache bash tzdata && \
+    cp /usr/share/zoneinfo/Europe/Helsinki /etc/localtime && \
+    echo "Europe/Helsinki" > /etc/timezone
+ENV TZ=Europe/Helsinki
+
+WORKDIR /discord-playbot
+RUN mkdir /discord-playbot/playlists
+
+# 2) Install deps
+RUN apk add --no-cache ffmpeg opus
+
+COPY requirements.txt ./
+RUN pip install -U pip && pip install -r requirements.txt
+
+# 3) Copy source files
+COPY play.py .
+
+# 4) Run bot under python
+CMD ["python", "play.py"]

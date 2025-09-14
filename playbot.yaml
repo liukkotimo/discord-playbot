@@ -1,0 +1,18 @@
+services:
+  playbot:
+    image: timoliukko42/discord-playbot:1.0
+    container_name: playbot
+    restart: unless-stopped
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+    volumes:
+      - playbot-data:/discord-playbot/playlists
+    networks:
+      - botnet
+
+networks:
+  botnet:
+    driver: bridge
+
+volumes:
+  playbot-data:
