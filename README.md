@@ -1,6 +1,9 @@
 # playBot
 
-playBot soittaa Discordissa käyttäjän äänikanavalla YouTube-videoiden ääniraitoja.
+Ddiscord bot to play music in voice channel from youtube. This is intended to be used in our private server so all is in finnish,
+excep commands.
+
+playbot soittaa Discordissa käyttäjän äänikanavalla YouTube-videoiden ääniraitoja.
 
 ## Komennot
 

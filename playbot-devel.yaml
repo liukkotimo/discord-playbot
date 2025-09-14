@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - GUILD_ID=613027381422063660
+      - GUILD_ID=${GUILD_ID}
       - LOG_LEVEL=DEBUG
     volumes:
       - playbot-data:/discord-playbot/playlists
