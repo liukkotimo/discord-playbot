@@ -123,6 +123,18 @@ async def play_next(guild_id: int, vc: discord.VoiceClient):
     try:
         if queues[guild_id] and len(queues[guild_id]) > 0:
             song = queues[guild_id][0]
+            if song["stream_url"] == "":
+                # Need to re-fetch stream_url
+                song["stream_url"] = await get_stream_url(song["webpage_url"])
+
+                info = await get_url_info(song["webpage_url"])
+                song["stream_url"] = info.get("url")
+                if not song["stream_url"]:
+                    logger.error(f'Could not retrieve stream URL for {song["webpage_url"]}, skipping')
+                    queues[guild_id].pop(0)
+                    await play_next(guild_id, vc)
+                    return
+                
             logger.debug(f'Start playing: {song["title"]} (requested by {song["requester"]})')
             source = discord.FFmpegPCMAudio(
                 song["stream_url"],
@@ -137,6 +149,15 @@ async def play_next(guild_id: int, vc: discord.VoiceClient):
                 await asyncio.sleep(0.25)
             logger.debug('vc.play(...) called')
             vc.play(discord.PCMVolumeTransformer(source, volume=1.0), after=_after_factory(BOT, guild_id, vc))
+
+            if len(queues[guild_id]) > 1:
+                next_song = queues[guild_id][1]
+                if next_song["stream_url"] == "":
+                    next_song["stream_url"] = await get_stream_url(next_song["webpage_url"])
+                    if not next_song["stream_url"]:
+                        logger.error(f'Could not retrieve stream URL for next song {next_song["webpage_url"]}')
+                        queues[guild_id].pop(1)  # remove the problematic next song
+
         else:
             logger.debug('Queue is empty, nothing to play next')
     except Exception as e:
@@ -174,6 +195,19 @@ def write_playlist(name: str, playlist: list[dict]):
         json.dump(playlist, f_out, ensure_ascii=False, indent=4)
     logger.info(f"Saved playlist '{name}' with {len(playlist)} songs")
 
+async def get_url_info(url: str) -> dict:
+    """Get video info from URL using yt-dlp."""
+    loop = asyncio.get_running_loop()
+    with YoutubeDL(YDL_OPTIONS) as ydl:
+        info = await loop.run_in_executor(None, lambda: ydl.extract_info(url, download=False))
+        if "entries" in info:  # playlist
+            info = info["entries"][0]
+        return info
+
+async def get_stream_url(url: str) -> str:
+    """Get direct stream URL from a YouTube URL."""
+    info = await get_url_info(url)
+    return info.get("url")
 
 @BOT.event
 async def on_ready():
@@ -269,13 +303,7 @@ async def play(interaction: discord.Interaction, url: str):
 
         await interaction.response.defer(ephemeral=True, thinking=True)
 
-        # Get metadata
-        with YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url, download=False)
-            ydl.close()
-
-        if "entries" in info:  # playlist
-            info = info["entries"][0]
+        info = await get_url_info(url)
 
         title = info.get("title", "Unknown")
         stream_url = info.get("url")
@@ -455,6 +483,7 @@ async def add_to_playlist(interaction: discord.Interaction, name: str):
     added_count = 0
     for song in queue:
         if song["webpage_url"] not in existing_urls:
+            song["stream_url"] = ""  # clear stream_url to force re-fetching when played from playlist
             playlist.append(song)
             existing_urls.add(song["webpage_url"])
             added_count += 1
@@ -471,7 +500,7 @@ async def play_playlist(interaction: discord.Interaction, name: str):
 
     playlist = playlist_data[name]
     if not playlist:
-        await interaction.response.send_message(f"Soittolista '{name}' on tyhjö.")
+        await interaction.response.send_message(f"Soittolista '{name}' on tyhjä.")
         return
 
     try:
@@ -490,11 +519,12 @@ async def play_playlist(interaction: discord.Interaction, name: str):
         added_count = 0
         for song in playlist:
             if song["webpage_url"] not in existing_urls:
+                song["stream_url"] = ""
                 queues[guild_id].append(song)
                 existing_urls.add(song["webpage_url"])
                 added_count += 1
 
-        await interaction.followup.send(f"Lisätty {added_count} kappaletta soittolistalta '{name}' soittojono.")
+        await interaction.followup.send(f"Lisätty {added_count} kappaletta soittolistalta '{name}' soittojonoon.")
 
         # Make sure playback is started or already ongoing
         await start_playback(interaction.guild_id, vc)
