@@ -231,7 +231,6 @@ async def on_ready():
     except Exception as e:
         logger.error(f"Slash-komentojen synkronointi epäonnistui: {e!r}")
 
-
 # Commands ------------------------------------------------------------------------------------------------------------
 #
 @BOT.tree.command(description="Näytä ohje ja lista komennoista")
@@ -567,7 +566,8 @@ if __name__ == "__main__":
 
     # Ffmpeg options
     FFMPEG_BEFORE = (
-        "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
+    '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 '
+    '-referer "https://www.nujakka.fi" -user_agent "UA"'
     )
     FFMPEG_OPTIONS = "-vn"  # No video
 
