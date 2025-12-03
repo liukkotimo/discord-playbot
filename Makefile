@@ -26,7 +26,5 @@ prune:
 	docker system prune
 	docker volume prune
 
-copy-remote:
-	pscp Dockerfile-playbot playbot.yaml Makefile README.md requirements.txt play.py timo@192.168.100.101:devel/discord/
 
 
