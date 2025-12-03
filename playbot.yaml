@@ -1,6 +1,6 @@
 services:
   playbot:
-    image: timoliukko42/discord-playbot:1.0
+    image: timoliukko42/discord-playbot:latest
     container_name: playbot
     restart: unless-stopped
     environment:
@@ -16,3 +16,4 @@ networks:
 
 volumes:
   playbot-data:
+
