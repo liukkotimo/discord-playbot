@@ -1,4 +1,4 @@
-.PHONY: build push up down
+.PHONY: build push up down prune
 
 IMAGE_NAME=discord-playbot
 REMOTE_REPO=timoliukko42
@@ -14,6 +14,10 @@ endif
 push: build
 	docker tag $(IMAGE_NAME):latest $(REMOTE_REPO)/$(IMAGE_NAME):latest
 	docker push $(REMOTE_REPO)/$(IMAGE_NAME):latest
+ifdef version
+	docker tag $(IMAGE_NAME):latest $(REMOTE_REPO)/$(IMAGE_NAME):$(version)
+	docker push $(REMOTE_REPO)/$(IMAGE_NAME):$(version)
+endif
 
 up:
 	docker-compose -f playbot-devel.yaml up --build

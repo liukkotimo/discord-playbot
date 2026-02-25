@@ -1,7 +1,7 @@
 FROM python:3.12-alpine3.22
 
 # 1) Set timezone to Helsinki
-RUN apk add --no-cache bash tzdata && \
+RUN apk add --no-cache bash tzdata ffmpeg opus deno && \
     cp /usr/share/zoneinfo/Europe/Helsinki /etc/localtime && \
     echo "Europe/Helsinki" > /etc/timezone
 ENV TZ=Europe/Helsinki
@@ -9,14 +9,16 @@ ENV TZ=Europe/Helsinki
 WORKDIR /discord-playbot
 RUN mkdir /discord-playbot/playlists
 
-# 2) Install deps
-RUN apk add --no-cache ffmpeg opus
-
 COPY requirements.txt ./
-RUN pip install -U pip && pip install -r requirements.txt
+
+RUN pip install --no-cache-dir -U pip && pip install --no-cache-dir -r requirements.txt
 
 # 3) Copy source files
-COPY play.py .
+COPY play.py ./
 
-# 4) Run bot under python
-CMD ["python", "play.py"]
+# 4) Copy you_tube_cookies to writable file and Create entrypoint script and
+RUN echo "cp /run/secrets/youtube_cookies /tmp/cookies.txt && python play.py" > /discord-playbot/entrypoint.sh
+RUN chmod +x /discord-playbot/entrypoint.sh
+
+# 5) Run bot under python
+CMD ["/bin/sh", "/discord-playbot/entrypoint.sh"]

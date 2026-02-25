@@ -206,5 +206,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Config secrects
+# Config secrets
 secret/
+
+cookies.txt
+
+.env

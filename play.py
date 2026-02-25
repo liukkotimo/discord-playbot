@@ -560,9 +560,13 @@ if __name__ == "__main__":
     YDL_OPTIONS = {
         "format": "bestaudio/best",
         "quiet": True,
-        "noplaylist": True,       # Handle only single videos
-        "default_search": "auto", # If you ever want to search by keywords
-    }
+        "noplaylist": True,
+        "default_search": "auto",
+        "cookiefile": "/tmp/cookies.txt",
+        "js_runtimes": {"deno": {"path": "/usr/bin/deno"}},
+        "remote_components": ["ejs:github"],
+        "cache_dir": False
+    } 
 
     # Ffmpeg options
     FFMPEG_BEFORE = (

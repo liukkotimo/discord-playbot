@@ -1,0 +1,28 @@
+# Ignore Docker related files
+#
+.dockerignore
+**/*.yaml
+**/Dockerfile*
+
+# Version control
+.git/
+.git*
+
+# Python stuff
+**/*.idea/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.venv/
+venv/
+unittests/
+
+# ignore ide
+.vscode/
+
+# Local scripts
+**/*.bat
+Makefile
+
+.env
