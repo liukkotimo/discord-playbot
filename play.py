@@ -136,11 +136,18 @@ async def play_next(guild_id: int, vc: discord.VoiceClient):
                     return
                 
             logger.debug(f'Start playing: {song["title"]} (requested by {song["requester"]})')
+
+            # Are we going to play a local song?
+            is_local = song.get("webpage_url", "").startswith("local:") or not song["stream_url"].startswith("http")
+            
+            # Use network settings if not a local file
+            before_args = FFMPEG_BEFORE if not is_local else None
+
             source = discord.FFmpegPCMAudio(
                 song["stream_url"],
-                before_options=FFMPEG_BEFORE,
+                before_options=before_args,  # None if a local file
                 options=FFMPEG_OPTIONS,
-            )        
+            )
 
             if vc.is_playing():
                 logger.debug('Stopping current playback to play next in queue')
@@ -162,6 +169,18 @@ async def play_next(guild_id: int, vc: discord.VoiceClient):
             logger.debug('Queue is empty, nothing to play next')
     except Exception as e:
         logger.error(f'Error in play_next: {e!r}')
+
+def find_local_song(query: str) -> Path | None:
+    """Etsii tiedostoa songs/ hakemistosta nimen perusteella (case-insensitive)."""
+    songs_dir = Path("songs")
+    if not songs_dir.exists():
+        songs_dir.mkdir()
+        return None
+
+    for file in songs_dir.iterdir():
+        if file.is_file() and file.stem.lower() == query.lower():
+            return file
+    return None
 
 def read_playlists():
     """Load playlists from disk if available."""
@@ -290,11 +309,11 @@ async def leave(interaction: discord.Interaction):
         await interaction.response.send_message("En ole äänikanavalla.", ephemeral=True)
 
 
-@BOT.tree.command(description="Soita YouTube-linkki")
-@app_commands.describe(url="YouTube-linkki")
-async def play(interaction: discord.Interaction, url: str):
+@BOT.tree.command(description="Soita YouTube-linkki tai paikallinen tiedosto")
+@app_commands.describe(query="URL tai tiedoston nimi songs-kansioissa")
+async def play(interaction: discord.Interaction, query: str):
     try:
-        logger.debug(f'Play command received with URL: {url}')
+        logger.debug(f'Play command received: {query}')
         
         vc = await ensure_join_same_channel(interaction)
         if not vc:
@@ -302,15 +321,24 @@ async def play(interaction: discord.Interaction, url: str):
 
         await interaction.response.defer(ephemeral=True, thinking=True)
 
-        info = await get_url_info(url)
-
-        title = info.get("title", "Unknown")
-        stream_url = info.get("url")
-        webpage_url = info.get("webpage_url", url)
-
         guild_id = interaction.guild_id
         if guild_id not in queues:
             queues[guild_id] = []
+
+        # 1. Tarkistetaan onko kyseessä paikallinen tiedosto
+        local_file = find_local_song(query)
+        
+        if local_file:
+            title = local_file.stem
+            stream_url = str(local_file.absolute())
+            webpage_url = f"local:{title}"
+            logger.debug(f"Löytyi paikallinen tiedosto: {stream_url}")
+        else:
+            # 2. Jos ei ole tiedosto, haetaan yt-dlp:llä (oletetaan URL/haku)
+            info = await get_url_info(query)
+            title = info.get("title", "Unknown")
+            stream_url = info.get("url")
+            webpage_url = info.get("webpage_url", query)
 
         queues[guild_id].append({
             "title": title,
@@ -319,15 +347,10 @@ async def play(interaction: discord.Interaction, url: str):
             "requester": interaction.user.display_name
         })
 
-        logger.debug(f'Queued: {title} (lisännyt {interaction.user.display_name})')
-
-        await interaction.followup.send(f"Lisätty soittolistalle: **{title}**")
-
-        # Make sure playback is started or already ongoing
+        await interaction.followup.send(f"Lisätty jonoon: **{title}**")
         await start_playback(interaction.guild_id, vc)
 
     except Exception as e:
-        # If response is already deferred
         if interaction.response.is_done():
             await interaction.followup.send(f"Epäonnistui: {e}", ephemeral=False)
         else:

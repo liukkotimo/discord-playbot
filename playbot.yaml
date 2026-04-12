@@ -9,6 +9,7 @@ services:
       - youtube_cookies
     volumes:
         - playbot-data:/discord-playbot/playlists
+        - playbot-songs:/discord-playbot/songs
     networks:
       - botnet
 
@@ -22,4 +23,5 @@ networks:
 
 volumes:
   playbot-data:
+  playbot-songs:
 
